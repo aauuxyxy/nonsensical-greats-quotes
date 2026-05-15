@@ -1,6 +1,7 @@
 # システム設計書 (Architecture) - 偉人の迷言アプリ
 
 ## 1. 技術スタック
+
 - **Frontend**: React Native (Expo)
 - **Language**: TypeScript
 - **LLM Engine**: MediaPipe LLM Inference API
@@ -10,6 +11,7 @@
 - **Local Cache**: React Context + In-memory Array (100件限定)
 
 ## 2. システム全体図
+
 ```mermaid
 graph TD
     User((ユーザー)) -->|スワイプ| UI[アプリ画面/SwipeInterface]
@@ -20,6 +22,7 @@ graph TD
 ```
 
 ## 3. データフロー
+
 1.  **初期化**: アプリ起動時にLLMモデルをロード。
 2.  **バックグラウンド生成**: `QuoteStore` が空、または残り少なくなると `QuoteGenerator` に30件の生成を依頼。
 3.  **推論**: LLMが「架空の偉人の名前」「肩書き」「名言内容」をJSON形式で生成。
