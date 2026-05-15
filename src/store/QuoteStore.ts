@@ -3,7 +3,6 @@ import { AppState, AppStateStatus } from "react-native";
 import { Quote } from "../types/Quote";
 
 const MAX_CACHE_SIZE = 100;
-const EXPIRATION_TIME_MS = 60 * 60 * 1000; // 1時間
 
 interface QuoteState {
   quotes: Quote[];
@@ -11,19 +10,15 @@ interface QuoteState {
   clear: () => void;
 }
 
-// 揮発性タイマーの参照をモジュールスコープで管理
-let expirationTimer: ReturnType<typeof setTimeout> | null = null;
-
-const resetExpirationTimer = (clearAction: () => void) => {
-  if (expirationTimer) clearTimeout(expirationTimer);
-  expirationTimer = setTimeout(clearAction, EXPIRATION_TIME_MS);
-};
-
 /**
  * Zustandを用いた名言キャッシュストア。
- * UIレンダリングの最適化と、シンプルな状態管理を実現します。
+ *
+ * 【キャッシュ管理のベストプラクティス】
+ * React Nativeにおける長時間の setTimeout はOSのタスク管理により不確実な挙動を招くため排除し、
+ * AppState（フォアグラウンド/バックグラウンド）のライフサイクルイベントのみに依存して
+ * 揮発性（バックグラウンド移行時の自動破棄）を確実かつ安全に担保します。
  */
-export const useQuoteStore = create<QuoteState>((set, get) => ({
+export const useQuoteStore = create<QuoteState>((set) => ({
   quotes: [],
 
   addQuotes: (newQuotes: Quote[]) => {
@@ -37,8 +32,6 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
             : combined,
       };
     });
-    // 追加アクションのたびに揮発タイマーをリセット
-    resetExpirationTimer(get().clear);
   },
 
   clear: () => {
@@ -47,13 +40,9 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
 }));
 
 // アプリのバックグラウンド移行時の状態監視
+// OSレベルでのバックグラウンド移行時に確実かつ安全にキャッシュを破棄する
 AppState.addEventListener("change", (nextAppState: AppStateStatus) => {
   if (nextAppState === "background") {
     useQuoteStore.getState().clear();
-  } else if (nextAppState === "active") {
-    resetExpirationTimer(useQuoteStore.getState().clear);
   }
 });
-
-// モジュール読み込み時に初回タイマーを開始
-resetExpirationTimer(useQuoteStore.getState().clear);
