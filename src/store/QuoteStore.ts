@@ -7,6 +7,7 @@ const MAX_CACHE_SIZE = 100;
 interface QuoteState {
   quotes: Quote[];
   addQuotes: (newQuotes: Quote[]) => void;
+  popQuote: () => void; // 先頭の名言を取り除く
   clear: () => void;
 }
 
@@ -32,6 +33,12 @@ export const useQuoteStore = create<QuoteState>((set) => ({
             : combined,
       };
     });
+  },
+  
+  popQuote: () => {
+    set((state) => ({
+      quotes: state.quotes.slice(1),
+    }));
   },
 
   clear: () => {
