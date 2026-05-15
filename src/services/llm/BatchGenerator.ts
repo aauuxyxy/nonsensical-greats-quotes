@@ -1,9 +1,14 @@
+import MediaPipeManager from "./MediaPipeManager";
 import { QuoteGenerator } from "./QuoteGenerator";
 import { useQuoteStore } from "../../store/QuoteStore";
+import { useAppStore } from "../../store/AppStore";
 
 const TARGET_BATCH_COUNT = 30;
 const GENERATE_PER_TICK = 5; // LLMの出力制限やJSON破損リスクを抑えるため、5件ずつ分割生成
 const LOW_WATER_MARK = 10; // キャッシュ残量が10件以下になったら自動補充を開始
+
+// モデルのURL（プロジェクトの要件に応じて変更可能）
+const MODEL_URL = "https://huggingface.co/google/gemma-2b-it-gpu-int4/resolve/main/gemma-2b-it-gpu-int4.bin";
 
 /**
  * バックグラウンドでLLMを稼働させ、名言キャッシュを自動補充するバッチ処理エンジン。
@@ -15,22 +20,36 @@ export class BatchGenerator {
 
   /**
    * QuoteStoreの監視を開始し、必要に応じて自動バッチ生成をトリガーします。
-   * アプリ起動時に一度だけ呼び出してください。
+   * また、AIエンジンの初期化（モデルロード）も実行します。
    */
-  public static initialize() {
+  public static async initialize() {
     if (this.unsubscribe) return;
 
-    // Zustandのストアを購読し、名言が減少したタイミングを検知
-    this.unsubscribe = useQuoteStore.subscribe((state) => {
-      if (state.quotes.length <= LOW_WATER_MARK && !this.isGenerating) {
+    try {
+      // 1. AIエンジンの初期化
+      const { setLoadProgress, setInitialized } = useAppStore.getState();
+      
+      await MediaPipeManager.initialize(MODEL_URL, (progress) => {
+        setLoadProgress(progress);
+      });
+
+      setInitialized(true);
+      console.log("[BatchGenerator] AI Engine initialized successfully.");
+
+      // 2. ストアの監視を開始
+      this.unsubscribe = useQuoteStore.subscribe((state) => {
+        if (state.quotes.length <= LOW_WATER_MARK && !this.isGenerating) {
+          this.runBatch();
+        }
+      });
+
+      // 初期補充のチェック
+      const currentQuotes = useQuoteStore.getState().quotes;
+      if (currentQuotes.length <= LOW_WATER_MARK && !this.isGenerating) {
         this.runBatch();
       }
-    });
-
-    // 初期化直後にも件数チェックを行い、空であれば即座に補充を開始
-    const currentQuotes = useQuoteStore.getState().quotes;
-    if (currentQuotes.length <= LOW_WATER_MARK && !this.isGenerating) {
-      this.runBatch();
+    } catch (error) {
+      console.error("[BatchGenerator] Initialization failed:", error);
     }
   }
 

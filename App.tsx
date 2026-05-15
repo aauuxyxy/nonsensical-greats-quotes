@@ -7,14 +7,24 @@ import { useEffect } from "react";
 import { BatchGenerator } from "./src/services/llm/BatchGenerator";
 import { QuoteStack } from "./src/components/QuoteStack";
 
+import { useAppStore } from "./src/store/AppStore";
+import { SplashScreen } from "./src/screens/SplashScreen";
+
 // 内部コンポーネント: フックを使ってテーマにアクセス
 const AppContent = () => {
   const theme = useTheme();
+  const isInitialized = useAppStore((state) => state.isInitialized);
 
   useEffect(() => {
     // バッチ生成エンジンの監視（および初期補充）を開始
+    // ※内部でMediaPipeエンジンの初期化も行われます
     BatchGenerator.initialize();
   }, []);
+
+  // 初期化（モデルロード）が完了するまではスプラッシュ画面を表示
+  if (!isInitialized) {
+    return <SplashScreen />;
+  }
 
   return (
     <View
