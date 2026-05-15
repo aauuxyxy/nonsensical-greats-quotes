@@ -72,30 +72,26 @@ export class QuoteGenerator {
     try {
       const parsed = JSON.parse(jsonString);
       const items = Array.isArray(parsed) ? parsed : [parsed];
-      const validQuotes: Quote[] = [];
 
-      for (const item of items) {
-        // 必須フィールドのバリデーション
-        if (
-          typeof item.author !== "string" ||
-          typeof item.content !== "string"
-        ) {
-          continue; // 無効なデータは安全のためスキップ
-        }
-
-        // Quote型に合わせてデータを整形して格納
-        validQuotes.push({
-          id: generateId(),
-          author: item.author,
-          title: item.title || "身元不明の賢者",
-          content: item.content,
-          birthYear: typeof item.birthYear === "number" ? item.birthYear : null,
-          deathYear: typeof item.deathYear === "number" ? item.deathYear : null,
-          createdAt: Date.now(),
-        });
-      }
-
-      return validQuotes;
+      // filterとmapを用いて非破壊的な配列操作を行う
+      return items
+        .filter(
+          (item: any) =>
+            typeof item.author === "string" && typeof item.content === "string",
+        )
+        .map(
+          (item: any): Quote => ({
+            id: generateId(),
+            author: item.author,
+            title: item.title || "身元不明の賢者",
+            content: item.content,
+            birthYear:
+              typeof item.birthYear === "number" ? item.birthYear : null,
+            deathYear:
+              typeof item.deathYear === "number" ? item.deathYear : null,
+            createdAt: Date.now(),
+          }),
+        );
     } catch (e) {
       console.error(
         "Failed to parse JSON response:",
