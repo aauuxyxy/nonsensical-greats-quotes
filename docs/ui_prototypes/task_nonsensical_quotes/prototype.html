@@ -69,6 +69,11 @@
             font-weight: 700;
             color: #D4AF37;
         }
+        .author-years {
+            font-size: 0.8rem;
+            color: #64748B;
+            margin-top: 2px;
+        }
         .author-title {
             font-size: 0.8rem;
             text-transform: uppercase;
@@ -103,10 +108,10 @@
 
     <script>
         const quotes = [
-            { author: "ベルナール・ド・昼寝", title: "二度寝の哲学者", content: "扉が閉まっている時、それはまだ開いていないということなのだ。" },
-            { author: "マキシム・無気力", title: "静止画の先駆者", content: "何も動かないものにこそ、真の止まっている姿がある。" },
-            { author: "シャルル・エプロン", title: "卵焼きの達人", content: "塩が足りないと感じるなら、それはまだしょっぱくない証拠だよ。" },
-            { author: "ジャン・ポール・空腹", title: "おやつの求道者", content: "三時のおやつがない世界、それは午後三時ではないのかもしれない。" }
+            { author: "エドゥアルト・フォン・クライン", title: "静寂の観測者", birthYear: 1812, deathYear: 1888, content: "扉が閉まっている時、それはまだ開いていないということなのだ。" },
+            { author: "フリードリヒ・ヴィルヘルム・マイヤー", title: "概念の解体者", birthYear: 1745, deathYear: 1821, content: "何も動かないものにこそ、真の止まっている姿がある。" },
+            { author: "アレクサンドル・イワノフ", title: "無限の思索家", birthYear: 1856, deathYear: 1932, content: "影が私を追いかけるのではない。私が光から逃げているだけなのだ。" },
+            { author: "ヘンリー・アーサー・トンプソン", title: "未踏の哲学者", birthYear: 1690, deathYear: 1765, content: "お腹が空いたと感じる時、それはまだ満腹ではないという警告なんだよ。" }
         ];
 
         let currentIndex = 0;
@@ -120,8 +125,10 @@
                 <div class="author-info">
                     <div class="author-title">${quote.title}</div>
                     <div class="author-name">${quote.author}</div>
+                    <div class="author-years">(${quote.birthYear} — ${quote.deathYear})</div>
                 </div>
             `;
+            
             setupInteractions(card);
             return card;
         }
