@@ -3,8 +3,10 @@ import { create } from 'zustand';
 interface AppState {
   isInitialized: boolean;
   loadProgress: number; // 0 - 100
+  modelUrl: string | null;
   setInitialized: (val: boolean) => void;
   setLoadProgress: (progress: number) => void;
+  setModelUrl: (url: string) => void;
 }
 
 /**
@@ -13,7 +15,9 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   isInitialized: false,
   loadProgress: 0,
+  modelUrl: null,
   
   setInitialized: (val: boolean) => set({ isInitialized: val }),
   setLoadProgress: (progress: number) => set({ loadProgress: progress }),
+  setModelUrl: (url: string) => set({ modelUrl: url }),
 }));

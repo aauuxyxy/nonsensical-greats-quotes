@@ -1,90 +1,79 @@
-import React from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  runOnJS,
-  interpolate,
-  Extrapolation,
-} from 'react-native-reanimated';
+import React, { useRef } from 'react';
+import { StyleSheet, Dimensions, PanResponder, Animated } from 'react-native';
 
 const { width } = Dimensions.get('window');
-// スワイプアウトと判定する閾値
-const SWIPE_THRESHOLD = width * 0.35;
+const SWIPE_THRESHOLD = width * 0.4;
 
 interface SwipeableCardProps {
   children: React.ReactNode;
-  onSwipe: () => void; // スワイプ完了時のコールバック
+  onSwipe: () => void;
 }
 
 /**
- * カードをスワイプ可能にするラッパーコンポーネント。
- * PanGestureとReanimatedを組み合わせて、滑らかな移動と回転を実現します。
+ * [SIMPLE UI] Reanimatedを使用せず、標準のPanResponderとAnimatedで実装したスワイプ可能なカード。
+ * HostFunctionのエラーを回避し、安定した動作を優先しています。
  */
 export const SwipeableCard: React.FC<SwipeableCardProps> = ({ children, onSwipe }) => {
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
+  // アニメーション値の初期化
+  const pan = useRef(new Animated.ValueXY()).current;
 
-  // ジェスチャーハンドラーの定義
-  const gesture = Gesture.Pan()
-    .onUpdate((event) => {
-      translateX.value = event.translationX;
-      translateY.value = event.translationY;
+  // ジェスチャーハンドラーの設定
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (e, gestureState) => {
+        // 現在のドラッグ位置を反映
+        pan.setValue({ x: gestureState.dx, y: gestureState.dy });
+      },
+      onPanResponderRelease: (e, gestureState) => {
+        if (Math.abs(gestureState.dx) > SWIPE_THRESHOLD) {
+          // スワイプアウト判定（画面外へ）
+          Animated.timing(pan, {
+            toValue: { 
+              x: gestureState.dx > 0 ? width * 1.2 : -width * 1.2, 
+              y: gestureState.dy 
+            },
+            duration: 200,
+            useNativeDriver: false, // translateX/Y以外も扱うためfalse
+          }).start(() => {
+            onSwipe();
+            // 値をリセットして次のカードに備える
+            pan.setValue({ x: 0, y: 0 });
+          });
+        } else {
+          // 閾値未満なら元の位置に戻る
+          Animated.spring(pan, {
+            toValue: { x: 0, y: 0 },
+            friction: 5,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
     })
-    .onEnd((event) => {
-      if (Math.abs(event.translationX) > SWIPE_THRESHOLD) {
-        // 横方向に大きくスワイプされた場合、画面外へ飛ばす
-        const destX = event.translationX > 0 ? width * 1.5 : -width * 1.5;
-        translateX.value = withTiming(destX, { duration: 300 }, () => {
-          runOnJS(onSwipe)();
-          // コールバック後に位置をリセット
-          translateX.value = 0;
-          translateY.value = 0;
-        });
-      } else {
-        // 閾値以下の場合はバネの動きで元の位置に戻る
-        translateX.value = withSpring(0, { damping: 15 });
-        translateY.value = withSpring(0, { damping: 15 });
-      }
-    });
+  ).current;
 
-  // アニメーションスタイルの計算
-  const animatedStyle = useAnimatedStyle(() => {
-    // 横移動に応じて回転を加える（レトロなカードが舞うような演出）
-    const rotate = interpolate(
-      translateX.value,
-      [-width, 0, width],
-      [-25, 0, 25],
-      Extrapolation.CLAMP
-    );
-
-    // スワイプアウトに近づくにつれて不透明度を下げる
-    const opacity = interpolate(
-      Math.abs(translateX.value),
-      [0, width * 0.5],
-      [1, 0.3],
-      Extrapolation.CLAMP
-    );
-
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { rotate: `${rotate}deg` },
-      ],
-      opacity,
-    };
+  // 回転アニメーションの補間
+  const rotate = pan.x.interpolate({
+    inputRange: [-width, 0, width],
+    outputRange: ['-15deg', '0deg', '15deg'],
   });
 
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.wrapper, animatedStyle]}>
-        {children}
-      </Animated.View>
-    </GestureDetector>
+    <Animated.View
+      style={[
+        styles.wrapper,
+        {
+          transform: [
+            { translateX: pan.x },
+            { translateY: pan.y },
+            { rotate: rotate },
+          ],
+        },
+      ]}
+      {...panResponder.panHandlers}
+    >
+      {children}
+    </Animated.View>
   );
 };
 
